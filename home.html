@@ -1,0 +1,73 @@
+<p>New test generated here</p>
+
+
+
+Postgres Exporter on RHEL9
+1.Create the postgres_exporter directory.
+	mkdir /opt/postgres_exporter
+	
+	cd /opt/postgres_exporter
+	download and untar packages:
+	tar -xzvf postgres_exporter-0.12.1.linux-amd64.tar.gz
+	
+2.Move the postgres_exporter package to be able to run as a service.
+cp postgres_exporter /usr/local/bin
+Return to the created directory.
+cd /opt/postgres_exporter
+
+Create postgres_exporter.env file to hold environment variables.
+vi postgres_exporter.env
+		example: PG_EXPORTER_EXTEND_QUERY_PATH="/opt/postgres_exporter/queries.yaml"
+DATA_SOURCE_NAME="postgresql://postgres:kemal123@localhost:5432/?sslmode=disable"
+
+/* please enter your server ip adreses with localhost */
+
+
+queries.yaml
+
+pg_replication:
+  query: "SELECT CASE WHEN NOT pg_is_in_recovery() THEN 0 ELSE GREATEST (0, EXTRACT(EPOCH FROM (now() - pg_last_xact_replay_timestamp()))) END AS lag"
+  master: true
+  metrics:
+    - lag:
+        usage: "GAUGE"
+        description: "Replication lag behind master in seconds"
+pg_postmaster:
+  query: "SELECT pg_postmaster_start_time as start_time_seconds from pg_postmaster_start_time()"
+  master: true
+  metrics:
+    - start_time_seconds:
+        usage: "GAUGE"
+        description: "Time at which postmaster started"
+pg_database:
+  query: "SELECT sum(pg_database_size(pg_database.datname)) as size FROM pg_database"
+  master: true        
+  metrics:
+    - size:
+        usage: "GAUGE"
+        description: "DB Size"
+pg_stat_user_tables:
+  query: "SELECT
+     current_database() datname,
+     schemaname,
+     relname,
+     seq_scan,
+     seq_tup_read,
+     idx_scan,
+     idx_tup_fetch,
+     n_tup_ins,
+     n_tup_upd,
+     n_tup_del,
+     n_tup_hot_upd,
+     n_live_tup,
+     n_dead_tup,
+     n_mod_since_analyze,
+     COALESCE(last_vacuum, '1970-01-01Z') as last_vacuum,
+     COALESCE(last_autovacuum, '1970-01-01Z') as last_autovacuum,
+     COALESCE(last_analyze, '1970-01-01Z') as last_analyze,
+     COALESCE(last_autoanalyze, '1970-01-01Z') as last_autoanalyze,
+     vacuum_count,
+     autovacuum_count,
+     analyze_count,
+     autoanalyze_count
+ 
